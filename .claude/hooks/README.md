@@ -8,7 +8,7 @@ Hooks run **before** Claude executes commands, allowing us to block potentially 
 
 **Implementation**: All hooks are written in **bash** to avoid Python dependencies.
 
-## 🛡️ Active Hooks (4 Total)
+## Security Hooks (4 Total)
 
 ### 1. Bash Command Validator (`validate-bash-command.sh`)
 
@@ -182,12 +182,71 @@ Files with these patterns in name:
 
 ---
 
+---
+
+## Auto-Maintenance Hooks (3 Total)
+
+### 5. File Change Tracker (`track-file-changes.sh`)
+
+**Purpose**: Silently logs Edit/Write events and nudges at thresholds
+**Type**: PostToolUse hook
+**Applies To**: `Edit` and `Write` tools
+**Behavior**:
+
+- Appends each file change to `.claude/maintenance/change-log.jsonl`
+- Increments edit counter in `.claude/maintenance/state.json`
+- Outputs `[maintenance-hint]` every 25 edits (throttled)
+- Skips changes to `.claude/maintenance/` itself
+
+### 6. Maintenance Event Detector (`detect-maintenance-events.sh`)
+
+**Purpose**: Detects git commits, builds, and tests to trigger maintenance
+**Type**: PostToolUse hook
+**Applies To**: `Bash` tool
+**Detected Events**:
+
+- `git commit` - Nudges for knowledge base update
+- `npm run build` - Nudges for cleanup + knowledge update
+- `npm test` / `npm run test` - Logs test runs
+- `npm run typecheck` - Signals end of build cycle
+
+### 7. Session End Check (`session-end-maintenance.sh`)
+
+**Purpose**: Flags pending maintenance for the next session
+**Type**: Stop hook
+**Behavior**:
+
+- Checks if 10+ edits or 2+ commits happened without maintenance
+- Sets `maintenance_pending: true` in state file
+- Next session picks this up via CLAUDE.md startup instructions
+
+### Maintenance Script (`maintenance.sh`)
+
+**Purpose**: Callable cleanup script (not a hook)
+**Usage**: `bash .claude/hooks/maintenance.sh [--dry-run]`
+**Actions**:
+
+- Cleans scout reports older than 30 days
+- Cleans completed plans older than 30 days
+- Rotates change log at 500+ entries
+- Reports stale knowledge files (60+ days)
+- Resets tracking counters
+
+---
+
 ## How It Works
 
-1. **PreToolUse Hook**: Runs before Claude executes any Bash tool
-2. **Pattern Matching**: Checks command against dangerous regex patterns
-3. **Exit Code 2**: Blocks execution and shows error to Claude
-4. **Exit Code 0**: Allows safe commands to proceed
+### PreToolUse Hooks (Security)
+1. Runs before Claude executes a tool
+2. Pattern matches against dangerous operations
+3. Exit code 2 blocks execution with error message
+4. Exit code 0 allows safe commands to proceed
+
+### PostToolUse Hooks (Maintenance)
+1. Runs after Claude executes a tool
+2. Logs events and checks thresholds
+3. Output text with `[maintenance-hint]` prefix is shown to Claude
+4. Claude acts on hints per CLAUDE.md instructions
 
 ## Testing the Hooks
 

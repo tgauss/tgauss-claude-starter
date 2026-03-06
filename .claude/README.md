@@ -13,9 +13,10 @@ This directory contains all configuration and documentation for working with Cla
 ├── agents/                # Sub-agents for specialized tasks
 ├── commands/              # Custom slash commands
 ├── config/                # Configuration files (external-docs.json)
-├── hooks/                 # Git operation hooks and security scripts
+├── hooks/                 # Security hooks + auto-maintenance hooks
 ├── knowledge/             # Feature documentation and patterns
 │   └── external/          # Cached external documentation
+├── maintenance/           # Runtime state for auto-maintenance (gitignored)
 ├── mcp-servers/           # MCP server implementations
 │   └── doc-fetcher/       # Documentation fetching server
 ├── plans/                 # Implementation plans
@@ -92,14 +93,23 @@ Configuration files for Claude Code features:
 
 ### 📁 hooks/
 
-Security hooks for protecting sensitive operations:
+**Security hooks** (PreToolUse — run before operations):
 
-- **protect-git-operations.sh** - Git operation safety (prevents force push to main, etc.)
-- **prevent-credential-exposure.sh** - Blocks commits with credentials
+- **validate-bash-command.sh** - Blocks dangerous bash commands
+- **protect-git-operations.sh** - Prevents destructive git operations
 - **protect-sensitive-files.sh** - Protects critical files from modification
-- **validate-bash-command.sh** - Validates bash commands before execution
-- **test-all-hooks.sh** - Tests all hooks for correctness
-- **test-hook.sh** - Test individual hooks
+- **prevent-credential-exposure.sh** - Blocks reading credential files
+
+**Auto-maintenance hooks** (PostToolUse/Stop — run after operations):
+
+- **track-file-changes.sh** - Logs Edit/Write events, nudges at thresholds
+- **detect-maintenance-events.sh** - Detects commits/builds, triggers knowledge updates
+- **session-end-maintenance.sh** - Flags pending maintenance for next session
+- **maintenance.sh** - Callable cleanup script (stale scouts, old plans, log rotation)
+
+**Testing:**
+
+- **test-all-hooks.sh** - Comprehensive test suite for all hooks
 
 See [hooks/README.md](hooks/README.md) for detailed documentation.
 
@@ -317,12 +327,23 @@ Claude Code uses specialized sub-agents for complex tasks:
 The `.claude/hooks/` directory contains security scripts that protect:
 
 - **Git operations** - Prevents destructive commands (force push to main, hard reset)
-- **Credentials** - Blocks commits containing API keys, tokens, passwords
+- **Credentials** - Blocks reading API keys, tokens, passwords
 - **Sensitive files** - Protects critical files from accidental modification
 - **Bash commands** - Validates commands before execution
 
-All hooks run automatically when Claude Code executes git or bash operations.
+All hooks run automatically when Claude Code executes operations.
 See [hooks/README.md](hooks/README.md) and [hooks/SECURITY-OVERVIEW.md](hooks/SECURITY-OVERVIEW.md).
+
+## Auto-Maintenance System
+
+The project self-maintains as you work:
+
+- **PostToolUse hooks** track file changes and detect commits/builds
+- **`[maintenance-hint]` signals** prompt Claude to update knowledge and clean artifacts
+- **Stop hook** flags pending maintenance for the next session
+- **CLAUDE.md instructions** tell Claude when to invoke the knowledge-maintainer agent
+
+Maintenance is invisible — Claude handles cleanup, knowledge updates, and artifact rotation automatically between tasks. See the Self-Maintenance section in [CLAUDE.md](/CLAUDE.md).
 
 ## Common Workflows
 

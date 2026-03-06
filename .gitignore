@@ -4,3 +4,7 @@
 *~
 .env
 .env.*
+
+# Maintenance runtime state (per-developer, not shared)
+.claude/maintenance/*
+!.claude/maintenance/.gitkeep

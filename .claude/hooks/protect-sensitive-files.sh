@@ -113,11 +113,11 @@ if [[ "$FILEPATH_LOWER" =~ secret ]] || \
    [[ "$FILEPATH_LOWER" =~ password ]] || \
    [[ "$FILEPATH_LOWER" =~ passwd ]] || \
    [[ "$FILEPATH_LOWER" =~ credential ]] || \
-   [[ "$FILEPATH_LOWER" =~ token ]] || \
    [[ "$FILEPATH_LOWER" =~ api_key ]] || \
    [[ "$FILEPATH_LOWER" =~ apikey ]] || \
-   [[ "$FILEPATH_LOWER" =~ private ]] || \
-   [[ "$FILEPATH_LOWER" =~ auth_ ]]; then
+   [[ "$FILENAME" =~ ^\..*token ]] || \
+   [[ "$FILEPATH_LOWER" =~ auth_token ]] || \
+   [[ "$FILEPATH_LOWER" =~ access_token ]]; then
     block_operation "File contains sensitive pattern in name"
 fi
 

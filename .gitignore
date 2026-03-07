@@ -5,6 +5,10 @@
 .env
 .env.*
 
+# MCP server build artifacts and dependencies
+.claude/mcp-servers/*/dist/
+.claude/mcp-servers/*/node_modules/
+
 # Maintenance runtime state (per-developer, not shared)
 .claude/maintenance/*
 !.claude/maintenance/.gitkeep

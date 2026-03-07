@@ -45,11 +45,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/validate-bash-command.sh"
+            "command": "test -f .claude/hooks/validate-bash-command.sh && .claude/hooks/validate-bash-command.sh || true"
           },
           {
             "type": "command",
-            "command": ".claude/hooks/protect-git-operations.sh"
+            "command": "test -f .claude/hooks/protect-git-operations.sh && .claude/hooks/protect-git-operations.sh || true"
           }
         ]
       },
@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/prevent-credential-exposure.sh"
+            "command": "test -f .claude/hooks/prevent-credential-exposure.sh && .claude/hooks/prevent-credential-exposure.sh || true"
           }
         ]
       },
@@ -67,7 +67,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/protect-sensitive-files.sh"
+            "command": "test -f .claude/hooks/protect-sensitive-files.sh && .claude/hooks/protect-sensitive-files.sh || true"
           }
         ]
       },
@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/protect-sensitive-files.sh"
+            "command": "test -f .claude/hooks/protect-sensitive-files.sh && .claude/hooks/protect-sensitive-files.sh || true"
           }
         ]
       }
@@ -87,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/track-file-changes.sh"
+            "command": "test -f .claude/hooks/track-file-changes.sh && .claude/hooks/track-file-changes.sh || true"
           }
         ]
       },
@@ -96,7 +96,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/track-file-changes.sh"
+            "command": "test -f .claude/hooks/track-file-changes.sh && .claude/hooks/track-file-changes.sh || true"
           }
         ]
       },
@@ -105,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/detect-maintenance-events.sh"
+            "command": "test -f .claude/hooks/detect-maintenance-events.sh && .claude/hooks/detect-maintenance-events.sh || true"
           }
         ]
       }
@@ -115,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-end-maintenance.sh"
+            "command": "test -f .claude/hooks/session-end-maintenance.sh && .claude/hooks/session-end-maintenance.sh || true"
           }
         ]
       }

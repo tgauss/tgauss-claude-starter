@@ -462,4 +462,4 @@ When adding new commands or agents:
 
 ---
 
-**Last Updated:** December 2025
+**Last Updated:** 2026-04-24

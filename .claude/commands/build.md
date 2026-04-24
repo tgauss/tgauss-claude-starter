@@ -46,7 +46,7 @@ Execute the implementation plan that was approved by the user. Update progress i
 5. **Run quality checks**:
    - Execute: `npm run prettier`
    - Execute: `npm run lint`
-   - Execute: `npm run typecheck:prod`
+   - Execute: `npm run typecheck` (if package.json defines it)
    - Update quality checklist in plan file
 6. **Update knowledge base**:
    - If modified files are part of a documented feature, update the relevant knowledge file

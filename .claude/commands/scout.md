@@ -37,7 +37,7 @@ Gather context and understand the codebase before making changes. This is the re
 
 1. **Read conventions**: Read CLAUDE.md for project conventions (in main context)
 2. **Check meta-index FIRST**:
-   - Read `.claude/knowledge/meta-index.md` to find related work
+   - Read `.claude/knowledge/INDEX.md` to find related work
    - Search for your topic in the "By Topic" section
    - Identify related scouts/plans/knowledge files
    - Note cross-references and patterns to avoid duplicating research

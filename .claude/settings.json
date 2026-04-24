@@ -14,20 +14,20 @@
       "Bash(wc:*)",
       "Bash(test:*)",
       "Bash(which:*)",
+      "Bash(stat:*)",
       "Bash(node --version)",
       "Bash(npm --version)",
       "Bash(git status)",
-      "Bash(git branch)",
+      "Bash(git branch:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",
+      "Bash(git show:*)",
       "Bash(npm run lint)",
-      "Bash(npm run typecheck*)",
+      "Bash(npm run typecheck:*)",
       "Bash(npm run prettier)",
       "Bash(npm test)",
-      "Bash(*)",
-      "FileEdit(*)",
-      "FileView(*)",
-      "Git(*)"
+      "Bash(bash .claude/hooks/maintenance.sh:*)",
+      "Bash(*)"
     ],
     "deny": [
       "Bash(rm -rf /*)",
@@ -39,17 +39,27 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -x .claude/hooks/session-start-maintenance.sh && .claude/hooks/session-start-maintenance.sh || true"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/hooks/validate-bash-command.sh && .claude/hooks/validate-bash-command.sh || true"
+            "command": "test -x .claude/hooks/validate-bash-command.sh && .claude/hooks/validate-bash-command.sh || true"
           },
           {
             "type": "command",
-            "command": "test -f .claude/hooks/protect-git-operations.sh && .claude/hooks/protect-git-operations.sh || true"
+            "command": "test -x .claude/hooks/protect-git-operations.sh && .claude/hooks/protect-git-operations.sh || true"
           }
         ]
       },
@@ -58,45 +68,35 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/hooks/prevent-credential-exposure.sh && .claude/hooks/prevent-credential-exposure.sh || true"
+            "command": "test -x .claude/hooks/prevent-credential-exposure.sh && .claude/hooks/prevent-credential-exposure.sh || true"
           }
         ]
       },
       {
-        "matcher": "Edit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/hooks/protect-sensitive-files.sh && .claude/hooks/protect-sensitive-files.sh || true"
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
+            "command": "test -x .claude/hooks/protect-sensitive-files.sh && .claude/hooks/protect-sensitive-files.sh || true"
+          },
           {
             "type": "command",
-            "command": "test -f .claude/hooks/protect-sensitive-files.sh && .claude/hooks/protect-sensitive-files.sh || true"
+            "command": "test -x .claude/hooks/block-hardcoded-secrets.sh && .claude/hooks/block-hardcoded-secrets.sh || true"
+          },
+          {
+            "type": "command",
+            "command": "test -x .claude/hooks/branch-guard.sh && .claude/hooks/branch-guard.sh || true"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/hooks/track-file-changes.sh && .claude/hooks/track-file-changes.sh || true"
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f .claude/hooks/track-file-changes.sh && .claude/hooks/track-file-changes.sh || true"
+            "command": "test -x .claude/hooks/track-file-changes.sh && .claude/hooks/track-file-changes.sh || true"
           }
         ]
       },
@@ -105,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/hooks/detect-maintenance-events.sh && .claude/hooks/detect-maintenance-events.sh || true"
+            "command": "test -x .claude/hooks/detect-maintenance-events.sh && .claude/hooks/detect-maintenance-events.sh || true"
           }
         ]
       }
@@ -115,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/hooks/session-end-maintenance.sh && .claude/hooks/session-end-maintenance.sh || true"
+            "command": "test -x .claude/hooks/session-end-maintenance.sh && .claude/hooks/session-end-maintenance.sh || true"
           }
         ]
       }

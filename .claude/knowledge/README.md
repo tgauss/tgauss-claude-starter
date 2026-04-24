@@ -1,153 +1,82 @@
 # Knowledge Base
 
-This directory contains documentation about specific feature areas, patterns, and utilities in the codebase.
+Living documentation about specific feature areas, patterns, and utilities in **your** project. This template ships empty — `knowledge-maintainer` fills it as you build.
 
-## Purpose
+## Principle: progressive disclosure
 
-The knowledge base serves as:
+`INDEX.md` is a **router**, not an encyclopedia. Heavy feature-area files load only when relevant. The goal:
 
-1. **Reference documentation** - How specific features work
-2. **Pattern library** - Established patterns and best practices
-3. **Utility catalog** - Reusable functions and components
-4. **Change log** - Evolution of features over time
+- Fast context for Claude (short index, summaries)
+- Deep detail on demand (Claude reads the specific file it needs)
+- Minimal context bloat over time
 
-## Why Knowledge Files?
-
-When working on features repeatedly, knowledge files help:
-
-- **Avoid duplication** - Reference existing utilities before creating new ones
-- **Maintain consistency** - Follow established patterns
-- **Speed up development** - Quick reference for how things work
-- **Document decisions** - Why things are implemented certain ways
-
-## File Organization
-
-Organize by feature area or domain:
+## Structure
 
 ```
-authentication.md         # Auth system patterns and utilities
-form-handling.md         # Form patterns, validation, hooks
-state-management.md      # State patterns, context, stores
-api-integration.md       # API patterns, error handling
-styling-theming.md       # Styling patterns, theme usage
-testing.md               # Testing patterns and utilities
+.claude/knowledge/
+├── INDEX.md                   # router: topics → files (auto-updated)
+├── README.md                  # this file
+├── <feature-area>.md          # one file per feature area
+└── external/                  # cached third-party docs (optional)
 ```
 
-## Knowledge File Structure
+Naming: kebab-case feature areas (`authentication.md`, `state-management.md`, `api-integration.md`).
 
-Each knowledge file should include:
+## How knowledge files get written
+
+You don't write these by hand. The `knowledge-maintainer` subagent is invoked automatically when:
+
+- A git commit concludes a significant feature (multiple files, new pattern, new behavior) — PostToolUse hook signals Claude to invoke it
+- A build completes successfully
+- The user explicitly asks to document something
+
+Trivial commits (typos, formatting, config tweaks) skip this step.
+
+## What belongs here
+
+- How a feature area is architected
+- Key utility functions with usage examples
+- Established patterns (forms, API calls, error handling, etc.)
+- Gotchas, edge cases, non-obvious decisions
+
+## What does NOT belong here
+
+- Generic framework documentation — use `external/` or install official docs MCP
+- Your personal opinions or TODO lists — use git history and issues
+- Code snippets for one-off problems — those belong in the code itself
+- Anything a new developer would derive from reading the code in 5 minutes
+
+## File structure (for when one gets written)
 
 ```markdown
-# Feature Area Name
+# <Feature Area>
 
 **Last Updated**: YYYY-MM-DD
-**Maintainer**: Team/Person
 
 ## Overview
-
-Brief description of this feature area
+One paragraph: what this feature area does, why it exists.
 
 ## Architecture
-
-How this feature is structured
+How it's structured; integration points; data flow.
 
 ## Key Files
-
-- `path/to/file.ts` - Purpose
-- `path/to/component.tsx` - Purpose
-
-## Utility Functions
-
-### functionName()
-
-**Location**: `path/to/file.ts`
-**Purpose**: What it does
-**Usage**: Code example
+- `path/to/file.ts` — what it does
+- `path/to/other.tsx` — what it does
 
 ## Patterns
+### <Pattern Name>
+When to use, how to implement, why this way.
 
-### Pattern Name
-
-Description and when to use
-
-## Quick Reference
-
-Common tasks and how to do them
+## Gotchas
+Non-obvious constraints future readers will trip on.
 
 ## Change Log
-
-- YYYY-MM-DD: What changed and why
+- YYYY-MM-DD: <what changed and why>
 ```
 
-## Integration with Workflow
+## Workflow integration
 
-Knowledge files are referenced in the workflow commands:
-
-- **Scout** - Checks knowledge base for existing utilities and patterns
-- **Plan** - References patterns and utilities when planning implementation
-- **Build** - Updates knowledge files when adding new features
-
-## Best Practices
-
-1. **Keep it current** - Update when features change
-2. **Be specific** - Include code examples and file paths
-3. **Explain why** - Document decisions and tradeoffs
-4. **Link related** - Cross-reference related knowledge files
-5. **Track changes** - Maintain a change log
-
-## When to Create a Knowledge File
-
-Create a knowledge file when:
-
-- A feature area is worked on multiple times
-- Patterns emerge that should be reused
-- Complex utilities need documentation
-- New developers would benefit from context
-
-## Current Knowledge Files
-
-### Architecture & System Design
-
-- **[3-layer-architecture-implementation.md](./3-layer-architecture-implementation.md)** - Branding → Theme → Layout architecture (v2.0.0 - UPDATED 2025-11-14)
-- **[dynamic-layout-system.md](./dynamic-layout-system.md)** - TypeScript-based vertical layout system (v2.0 - UPDATED 2025-11-18)
-- **[adding-new-verticals.md](./adding-new-verticals.md)** - Step-by-step guide for adding theme & layout verticals (v1.0.1 - UPDATED 2025-11-18)
-- **[routing-architecture.md](./routing-architecture.md)** - Route structure, navigation patterns, and SEO
-- **[state-management.md](./state-management.md)** - DataProvider, React Context, and data fetching patterns (NEW 2025-11-14)
-
-### Component & Code Patterns
-
-- **[component-patterns.md](./component-patterns.md)** - Reusable component patterns and best practices (UPDATED 2025-11-18)
-
-### Theme & Styling
-
-- **[theme-system.md](./theme-system.md)** - Dynamic MUI theming, shared utilities, dark mode (NEW 2025-11-14)
-
-### Utilities & Helpers
-
-- **[utilities.md](./utilities.md)** - Complete utility function catalog (formatting, validation, mortgage calcs) (NEW 2025-11-14)
-- **[error-handling.md](./error-handling.md)** - Error boundaries, logging, user-friendly errors (NEW 2025-11-14)
-
-### SEO & Accessibility
-
-- **[seo-patterns.md](./seo-patterns.md)** - SEO component, structured data, semantic HTML (NEW 2025-11-14)
-
-### Testing
-
-- **[testing.md](./testing.md)** - E2E testing patterns and utilities
-- **[theming-tests.md](./theming-tests.md)** - Theme testing strategies
-
-### Tools & Integration
-
-- **[mcp-server-patterns.md](./mcp-server-patterns.md)** - MCP server integration patterns
-- **[external-docs-management.md](./external-docs-management.md)** - External documentation management
-
-## Example Knowledge Files
-
-Good candidates for knowledge files:
-
-- Form handling patterns (react-hook-form, validation)
-- API integration patterns (GraphQL, REST, error handling)
-- Component patterns (compound components, render props)
-- Testing utilities (custom hooks, test helpers)
-- Build/deployment processes
-- Configuration patterns
+- **Scout** (`/scout`) — reads INDEX.md first to avoid re-researching what's documented
+- **Plan** (`/plan`) — references established patterns from knowledge files
+- **Build** (`/build`) — hooks signal `knowledge-maintainer` to update after significant commits
+- **Simplify** (bloat detection) — hooks signal `/simplify` at every 10 commits

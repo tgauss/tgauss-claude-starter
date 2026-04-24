@@ -37,7 +37,7 @@ Create a detailed, step-by-step implementation plan based on the scout findings.
    - Find most recent file matching current date or latest date
    - Read that file (e.g., `.claude/scout/20251117-001-jr-scout-feature.md`)
 2. **Check meta-index for context**:
-   - Read `.claude/knowledge/meta-index.md`
+   - Read `.claude/knowledge/INDEX.md`
    - Search for related plans in "By Topic" and "Scout → Plan → Knowledge Mapping"
    - Identify similar implementation patterns from related plans
    - Note cross-references to avoid duplicating planning work
@@ -65,7 +65,7 @@ Create a detailed, step-by-step implementation plan based on the scout findings.
    - Reference existing utilities from knowledge base instead of creating duplicates
    - Call out related plans and how this plan differs/builds upon them
    - Include steps to update knowledge base if modifying documented features
-   - Include step to update meta-index.md with new plan
+   - Include step to update INDEX.md with new plan
 8. **Save plan**: Write to `.claude/plans/YYYYMMDD-NNN-initials-plan-feature.md`
 9. **Present to user**: Display plan with file path and related work context
 10. **Request approval**: Ask "Does this plan look good? Should I proceed with building?"
@@ -135,7 +135,7 @@ Save plan to `.claude/plans/YYYYMMDD-NNN-initials-plan-feature.md` with this str
 
 ## Post-Implementation
 
-- [ ] Update `.claude/knowledge/meta-index.md` with new plan entry
+- [ ] Update `.claude/knowledge/INDEX.md` with new plan entry
 - [ ] Update related knowledge files if patterns discovered
 - [ ] Cross-reference with related scouts/plans
 

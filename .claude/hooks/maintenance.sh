@@ -2,18 +2,18 @@
 #
 # Project Maintenance Script
 #
-# Called by Claude to clean up stale artifacts and reset tracking.
-# Run at natural pause points (after commits, end of features).
+# Runs automatically from SessionStart and Stop hooks when thresholds are met.
+# Also callable manually: bash .claude/hooks/maintenance.sh [--dry-run]
 #
-# Actions:
+# Actions (all deterministic — no Claude required):
 #   1. Clean old scout reports (>30 days)
 #   2. Clean completed plans (>30 days)
-#   3. Rotate change log (archive if >500 lines)
-#   4. Reset tracking counters
-#   5. Check knowledge file freshness
-#   6. Output summary
-#
-# Usage: bash .claude/hooks/maintenance.sh [--dry-run]
+#   3. Sweep temp/scratch files
+#   4. Rotate change log (archive if >500 lines)
+#   5. Prune archived logs (>90 days)
+#   6. Report stale knowledge files (>60 days)
+#   7. Check bloat thresholds → flag for simplify pass
+#   8. Reset tracking counters
 
 PROJECT_ROOT="$(pwd)"
 MAINT_DIR="${PROJECT_ROOT}/.claude/maintenance"
@@ -22,198 +22,190 @@ CHANGE_LOG="${MAINT_DIR}/change-log.jsonl"
 SCOUT_DIR="${PROJECT_ROOT}/.claude/scout"
 PLANS_DIR="${PROJECT_ROOT}/.claude/plans"
 KNOWLEDGE_DIR="${PROJECT_ROOT}/.claude/knowledge"
+SCRATCH_DIR="${PROJECT_ROOT}/.claude/scratch"
 
 DRY_RUN=false
-if [[ "$1" == "--dry-run" ]]; then
-    DRY_RUN=true
-fi
+[[ "$1" == "--dry-run" ]] && DRY_RUN=true
 
-# Ensure directories exist
 mkdir -p "$MAINT_DIR"
 
 echo "=========================================="
 echo "  Project Maintenance Report"
 echo "  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=========================================="
-echo ""
 
 CLEANED_SCOUTS=0
 CLEANED_PLANS=0
+CLEANED_TEMPS=0
+CLEANED_LOGS=0
 LOG_ROTATED=false
+SIMPLIFY_FLAGGED=false
 
-# ---- 1. Clean old scout reports (>30 days) ----
-echo "## Scout Reports Cleanup"
+# Portable stat (macOS + Linux)
+file_mtime() {
+    stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null
+}
+age_days() {
+    local mtime=$1
+    echo $(( ( $(date +%s) - mtime ) / 86400 ))
+}
+sed_inplace() {
+    sed -i '' "$1" "$2" 2>/dev/null || sed -i "$1" "$2" 2>/dev/null
+}
+
+# ---- 1. Scout reports cleanup ----
 echo ""
-
+echo "## Scout Reports (>30 days)"
 if [[ -d "$SCOUT_DIR" ]]; then
     while IFS= read -r -d '' file; do
-        BASENAME=$(basename "$file")
-        if [[ "$BASENAME" == "README.md" ]]; then
-            continue
-        fi
-        # macOS stat with Linux fallback
-        FILE_MTIME=$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file" 2>/dev/null)
-        if [[ -z "$FILE_MTIME" ]]; then
-            continue
-        fi
-        AGE_DAYS=$(( ( $(date +%s) - FILE_MTIME ) / 86400 ))
-        if [[ $AGE_DAYS -gt 30 ]]; then
-            if [[ "$DRY_RUN" == "true" ]]; then
-                echo "  [DRY RUN] Would remove: $BASENAME (${AGE_DAYS} days old)"
-            else
-                rm "$file"
-                echo "  Removed: $BASENAME (${AGE_DAYS} days old)"
+        [[ "$(basename "$file")" == "README.md" ]] && continue
+        MT=$(file_mtime "$file"); [[ -z "$MT" ]] && continue
+        AGE=$(age_days "$MT")
+        if [[ $AGE -gt 30 ]]; then
+            if $DRY_RUN; then echo "  [dry] would remove $(basename "$file") (${AGE}d)"
+            else rm "$file" && echo "  removed $(basename "$file") (${AGE}d)"
             fi
             CLEANED_SCOUTS=$((CLEANED_SCOUTS + 1))
         fi
     done < <(find "$SCOUT_DIR" -name "*.md" -not -name "README.md" -print0 2>/dev/null)
 fi
+[[ $CLEANED_SCOUTS -eq 0 ]] && echo "  none"
 
-if [[ $CLEANED_SCOUTS -eq 0 ]]; then
-    echo "  No stale scout reports found."
-fi
+# ---- 2. Completed plans cleanup ----
 echo ""
-
-# ---- 2. Clean completed plans (>30 days) ----
-echo "## Plans Cleanup"
-echo ""
-
+echo "## Completed Plans (>30 days)"
 if [[ -d "$PLANS_DIR" ]]; then
     while IFS= read -r -d '' file; do
-        BASENAME=$(basename "$file")
-        if [[ "$BASENAME" == "README.md" ]]; then
-            continue
-        fi
-        FILE_MTIME=$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file" 2>/dev/null)
-        if [[ -z "$FILE_MTIME" ]]; then
-            continue
-        fi
-        AGE_DAYS=$(( ( $(date +%s) - FILE_MTIME ) / 86400 ))
-        if [[ $AGE_DAYS -gt 30 ]]; then
-            # Only clean plans marked as completed
-            if grep -qi "Status.*Completed\|COMPLETED\|status:.*completed" "$file" 2>/dev/null; then
-                if [[ "$DRY_RUN" == "true" ]]; then
-                    echo "  [DRY RUN] Would remove completed plan: $BASENAME (${AGE_DAYS} days old)"
-                else
-                    rm "$file"
-                    echo "  Removed completed plan: $BASENAME (${AGE_DAYS} days old)"
-                fi
-                CLEANED_PLANS=$((CLEANED_PLANS + 1))
-            else
-                echo "  Keeping: $BASENAME (${AGE_DAYS} days old, not marked completed)"
+        [[ "$(basename "$file")" == "README.md" ]] && continue
+        MT=$(file_mtime "$file"); [[ -z "$MT" ]] && continue
+        AGE=$(age_days "$MT")
+        [[ $AGE -le 30 ]] && continue
+        if grep -qi "Status.*Completed\|status:.*completed" "$file" 2>/dev/null; then
+            if $DRY_RUN; then echo "  [dry] would remove completed $(basename "$file") (${AGE}d)"
+            else rm "$file" && echo "  removed completed $(basename "$file") (${AGE}d)"
             fi
+            CLEANED_PLANS=$((CLEANED_PLANS + 1))
         fi
     done < <(find "$PLANS_DIR" -name "*.md" -not -name "README.md" -print0 2>/dev/null)
 fi
+[[ $CLEANED_PLANS -eq 0 ]] && echo "  none"
 
-if [[ $CLEANED_PLANS -eq 0 ]]; then
-    echo "  No stale completed plans found."
+# ---- 3. Temp/scratch cleanup ----
+echo ""
+echo "## Temp / Scratch Files"
+
+# .claude/scratch/ — anything >7 days
+if [[ -d "$SCRATCH_DIR" ]]; then
+    while IFS= read -r -d '' file; do
+        MT=$(file_mtime "$file"); [[ -z "$MT" ]] && continue
+        AGE=$(age_days "$MT")
+        if [[ $AGE -gt 7 ]]; then
+            if $DRY_RUN; then echo "  [dry] would remove scratch $(basename "$file") (${AGE}d)"
+            else rm "$file" && echo "  removed scratch $(basename "$file") (${AGE}d)"
+            fi
+            CLEANED_TEMPS=$((CLEANED_TEMPS + 1))
+        fi
+    done < <(find "$SCRATCH_DIR" -type f -print0 2>/dev/null)
 fi
-echo ""
 
-# ---- 3. Rotate change log ----
+# Stale .tmp / .bak in project root (>7 days, not inside node_modules / .git)
+while IFS= read -r -d '' file; do
+    MT=$(file_mtime "$file"); [[ -z "$MT" ]] && continue
+    AGE=$(age_days "$MT")
+    if [[ $AGE -gt 7 ]]; then
+        if $DRY_RUN; then echo "  [dry] would remove tmp $file (${AGE}d)"
+        else rm "$file" && echo "  removed tmp $file (${AGE}d)"
+        fi
+        CLEANED_TEMPS=$((CLEANED_TEMPS + 1))
+    fi
+done < <(find "$PROJECT_ROOT" -maxdepth 3 \( -name "*.tmp" -o -name "*.bak" -o -name "*~" \) \
+    -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*" \
+    -print0 2>/dev/null)
+
+[[ $CLEANED_TEMPS -eq 0 ]] && echo "  none"
+
+# ---- 4. Change log rotation ----
+echo ""
 echo "## Change Log"
-echo ""
-
 if [[ -f "$CHANGE_LOG" ]]; then
     LOG_LINES=$(wc -l < "$CHANGE_LOG" | tr -d ' ')
-    echo "  Current entries: ${LOG_LINES}"
-
+    echo "  current entries: ${LOG_LINES}"
     if [[ $LOG_LINES -gt 500 ]]; then
         ARCHIVE_FILE="${MAINT_DIR}/change-log-$(date +%Y%m%d).jsonl.old"
-        if [[ "$DRY_RUN" == "true" ]]; then
-            echo "  [DRY RUN] Would archive to: $(basename "$ARCHIVE_FILE")"
-            echo "  [DRY RUN] Would keep last 100 entries"
+        if $DRY_RUN; then
+            echo "  [dry] would archive to $(basename "$ARCHIVE_FILE") and keep last 100"
         else
             cp "$CHANGE_LOG" "$ARCHIVE_FILE"
-            tail -100 "$CHANGE_LOG" > "${CHANGE_LOG}.tmp"
-            mv "${CHANGE_LOG}.tmp" "$CHANGE_LOG"
-            echo "  Archived to: $(basename "$ARCHIVE_FILE")"
-            echo "  Kept last 100 entries"
+            tail -100 "$CHANGE_LOG" > "${CHANGE_LOG}.tmp" && mv "${CHANGE_LOG}.tmp" "$CHANGE_LOG"
+            echo "  archived to $(basename "$ARCHIVE_FILE"); kept last 100"
+            LOG_ROTATED=true
         fi
-        LOG_ROTATED=true
-    else
-        echo "  Under threshold (500), no rotation needed."
     fi
-
-    # Activity summary
-    if [[ $LOG_LINES -gt 0 ]]; then
-        EDIT_EVENTS=$(grep -c '"file_edit"\|"file_write"' "$CHANGE_LOG" 2>/dev/null || echo 0)
-        COMMIT_EVENTS=$(grep -c '"git_commit"' "$CHANGE_LOG" 2>/dev/null || echo 0)
-        BUILD_EVENTS=$(grep -c '"build_success"' "$CHANGE_LOG" 2>/dev/null || echo 0)
-        echo "  Activity: ${EDIT_EVENTS} edits, ${COMMIT_EVENTS} commits, ${BUILD_EVENTS} builds"
-    fi
-else
-    echo "  No change log exists yet."
 fi
-echo ""
 
-# ---- 4. Check knowledge files freshness ----
-echo "## Knowledge Files Freshness"
-echo ""
-
-if [[ -d "$KNOWLEDGE_DIR" ]]; then
-    STALE_COUNT=0
+# ---- 5. Prune old archived logs (>90 days) ----
+if [[ -d "$MAINT_DIR" ]]; then
     while IFS= read -r -d '' file; do
-        BASENAME=$(basename "$file")
-        if [[ "$BASENAME" == "README.md" ]] || [[ "$BASENAME" == "meta-index.md" ]]; then
-            continue
+        MT=$(file_mtime "$file"); [[ -z "$MT" ]] && continue
+        AGE=$(age_days "$MT")
+        if [[ $AGE -gt 90 ]]; then
+            if $DRY_RUN; then echo "  [dry] would prune old archive $(basename "$file") (${AGE}d)"
+            else rm "$file" && echo "  pruned old archive $(basename "$file") (${AGE}d)"
+            fi
+            CLEANED_LOGS=$((CLEANED_LOGS + 1))
         fi
-        FILE_MTIME=$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file" 2>/dev/null)
-        if [[ -z "$FILE_MTIME" ]]; then
-            continue
-        fi
-        AGE_DAYS=$(( ( $(date +%s) - FILE_MTIME ) / 86400 ))
-        if [[ $AGE_DAYS -gt 60 ]]; then
-            echo "  STALE (${AGE_DAYS}d): $BASENAME"
-            STALE_COUNT=$((STALE_COUNT + 1))
+    done < <(find "$MAINT_DIR" -name "*.jsonl.old" -print0 2>/dev/null)
+fi
+
+# ---- 6. Stale knowledge files ----
+echo ""
+echo "## Knowledge Files (>60 days since update)"
+if [[ -d "$KNOWLEDGE_DIR" ]]; then
+    STALE=0
+    while IFS= read -r -d '' file; do
+        BN=$(basename "$file")
+        [[ "$BN" == "README.md" || "$BN" == "meta-index.md" ]] && continue
+        MT=$(file_mtime "$file"); [[ -z "$MT" ]] && continue
+        AGE=$(age_days "$MT")
+        if [[ $AGE -gt 60 ]]; then
+            echo "  stale (${AGE}d): $BN"
+            STALE=$((STALE + 1))
         fi
     done < <(find "$KNOWLEDGE_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null)
-
-    if [[ $STALE_COUNT -eq 0 ]]; then
-        echo "  All knowledge files are current (updated within 60 days)."
-    else
-        echo "  ${STALE_COUNT} knowledge file(s) may need review."
-    fi
-else
-    echo "  No knowledge directory found."
+    [[ $STALE -eq 0 ]] && echo "  all current"
 fi
-echo ""
 
-# ---- 5. Reset state ----
-echo "## State Reset"
+# ---- 7. Bloat detection for simplify pass ----
 echo ""
+echo "## Simplify Check"
+if [[ -f "$STATE_FILE" ]]; then
+    SIMPLIFY_COUNT=$(grep -o '"commits_since_last_simplify"[[:space:]]*:[[:space:]]*[0-9]*' "$STATE_FILE" | grep -o '[0-9]*$')
+    SIMPLIFY_COUNT=${SIMPLIFY_COUNT:-0}
+    if [[ $SIMPLIFY_COUNT -ge 10 ]]; then
+        echo "  ${SIMPLIFY_COUNT} commits since last simplify — flagged for review"
+        SIMPLIFY_FLAGGED=true
+    else
+        echo "  ${SIMPLIFY_COUNT}/10 commits since last simplify"
+    fi
+fi
 
+# ---- 8. Reset state ----
 TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-if [[ "$DRY_RUN" == "true" ]]; then
-    echo "  [DRY RUN] Would reset counters and update last_maintenance_ts"
-else
-    if [[ -f "$STATE_FILE" ]]; then
-        sed -i '' "s/\"edits_since_last_maintenance\"[[:space:]]*:[[:space:]]*[0-9]*/\"edits_since_last_maintenance\":0/" "$STATE_FILE" 2>/dev/null || \
-        sed -i "s/\"edits_since_last_maintenance\"[[:space:]]*:[[:space:]]*[0-9]*/\"edits_since_last_maintenance\":0/" "$STATE_FILE" 2>/dev/null
-
-        sed -i '' "s/\"commits_since_last_maintenance\"[[:space:]]*:[[:space:]]*[0-9]*/\"commits_since_last_maintenance\":0/" "$STATE_FILE" 2>/dev/null || \
-        sed -i "s/\"commits_since_last_maintenance\"[[:space:]]*:[[:space:]]*[0-9]*/\"commits_since_last_maintenance\":0/" "$STATE_FILE" 2>/dev/null
-
-        sed -i '' "s/\"last_maintenance_ts\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"last_maintenance_ts\":\"${TS}\"/" "$STATE_FILE" 2>/dev/null || \
-        sed -i "s/\"last_maintenance_ts\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"last_maintenance_ts\":\"${TS}\"/" "$STATE_FILE" 2>/dev/null
-
-        sed -i '' "s/\"maintenance_pending\"[[:space:]]*:[[:space:]]*true/\"maintenance_pending\":false/" "$STATE_FILE" 2>/dev/null || \
-        sed -i "s/\"maintenance_pending\"[[:space:]]*:[[:space:]]*true/\"maintenance_pending\":false/" "$STATE_FILE" 2>/dev/null
-    else
-        echo "{\"last_maintenance_ts\":\"${TS}\",\"last_knowledge_update_ts\":\"\",\"last_commit_ts\":\"\",\"edits_since_last_maintenance\":0,\"commits_since_last_maintenance\":0,\"maintenance_pending\":false}" > "$STATE_FILE"
-    fi
-    echo "  Counters reset. Last maintenance: ${TS}"
+if ! $DRY_RUN && [[ -f "$STATE_FILE" ]]; then
+    sed_inplace "s/\"edits_since_last_maintenance\"[[:space:]]*:[[:space:]]*[0-9]*/\"edits_since_last_maintenance\":0/" "$STATE_FILE"
+    sed_inplace "s/\"commits_since_last_maintenance\"[[:space:]]*:[[:space:]]*[0-9]*/\"commits_since_last_maintenance\":0/" "$STATE_FILE"
+    sed_inplace "s/\"last_maintenance_ts\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"last_maintenance_ts\":\"${TS}\"/" "$STATE_FILE"
+    sed_inplace "s/\"maintenance_pending\"[[:space:]]*:[[:space:]]*true/\"maintenance_pending\":false/" "$STATE_FILE"
 fi
-echo ""
 
-# ---- Summary ----
+echo ""
 echo "=========================================="
 echo "  Summary"
 echo "=========================================="
-echo "  Scout reports cleaned:  ${CLEANED_SCOUTS}"
-echo "  Plans cleaned:          ${CLEANED_PLANS}"
-echo "  Change log rotated:     ${LOG_ROTATED}"
-echo "  Counters reset:         $([ "$DRY_RUN" = "true" ] && echo "no (dry run)" || echo "yes")"
+echo "  Scouts cleaned:    ${CLEANED_SCOUTS}"
+echo "  Plans cleaned:     ${CLEANED_PLANS}"
+echo "  Temp files:        ${CLEANED_TEMPS}"
+echo "  Archive logs:      ${CLEANED_LOGS}"
+echo "  Log rotated:       ${LOG_ROTATED}"
+echo "  Simplify needed:   ${SIMPLIFY_FLAGGED}"
 echo "=========================================="

@@ -2,7 +2,7 @@
 description: Create a new custom slash command prompt
 category: meta
 version: 1.0.0
-allowed-tools: Write, Edit, WebFetch, Task, mcp__firecrawl-mcp__firecrawl_scrape, Fetch
+allowed-tools: Write, Edit, WebFetch, WebSearch, Agent
 ---
 
 # MetaPrompt

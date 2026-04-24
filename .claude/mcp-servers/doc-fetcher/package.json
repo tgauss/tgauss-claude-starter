@@ -1,7 +1,7 @@
 {
-  "name": "@carbon-ui/doc-fetcher-mcp",
+  "name": "tgauss-doc-fetcher-mcp",
   "version": "1.0.0",
-  "description": "Custom MCP server for fetching and caching external documentation with progressive disclosure",
+  "description": "MCP server that fetches and caches external documentation with progressive disclosure",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -16,7 +16,7 @@
     "fetcher",
     "progressive-disclosure"
   ],
-  "author": "Carbon UI Team",
+  "author": "tgauss",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

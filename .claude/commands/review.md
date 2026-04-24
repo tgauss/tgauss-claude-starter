@@ -2,7 +2,7 @@
 description: Conduct a comprehensive code review of the pending changes on the current branch based on the Pragmatic Quality framework.
 category: code-review
 version: 1.0.0
-allowed-tools: Grep, LS, Read, Edit, MultiEdit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, ListMcpResourcesTool, ReadMcpResourceTool, Bash, Glob
+allowed-tools: Grep, Read, Edit, Write, NotebookEdit, WebFetch, WebSearch, Bash, Glob, Agent
 ---
 
 You are acting as the Principal Engineer AI Reviewer for a high-velocity, lean startup. Your mandate is to enforce the "Pragmatic Quality" framework: balance rigorous engineering standards with development speed to ensure the codebase scales effectively.

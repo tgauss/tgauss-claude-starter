@@ -58,7 +58,7 @@ _Starting scout phase..._
 ### Phase 1: Autonomous Scout (Sub-Agent)
 
 1. **Read meta-index for context** (in main context before launching sub-agent):
-   - Read `.claude/knowledge/meta-index.md`
+   - Read `.claude/knowledge/INDEX.md`
    - Search for related topics in "By Topic" section
    - Identify related scouts, plans, and knowledge files
    - Extract list of relevant prior work to pass to sub-agent
@@ -341,7 +341,7 @@ Use this EXACT structure:
 - [ ] Manual testing
 
 ## Post-Implementation
-- [ ] Update `.claude/knowledge/meta-index.md` with new plan entry
+- [ ] Update `.claude/knowledge/INDEX.md` with new plan entry
 - [ ] Update related knowledge files if patterns discovered
 - [ ] Cross-reference with related scouts/plans
 
